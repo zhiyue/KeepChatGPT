@@ -428,6 +428,7 @@
     <li id=nmenuid_ec>${tl("日新月异")}</li>
     <li id=nmenuid_dm>${tl("暗色主题")}</li>
     <li id=nmenuid_ca>${tl("取消动画")}</li>
+    <li id=nmenuid_sm>${tl("显示移动端API")}</li>
     <li id=nmenuid_sd>${tl("显示调试")}</li>
     <li id=nmenuid_cu>${tl("检查更新")}</li>
     <li id=nmenuid_ap>${tl("赞赏鼓励")}</li>
@@ -438,6 +439,7 @@
 
         $('#nmenuid_sd').appendChild(ncheckbox());
         $('#nmenuid_dm').appendChild(ncheckbox());
+        $('#nmenuid_sm').appendChild(ncheckbox());
         $('#nmenuid_ca').appendChild(ncheckbox());
         $('#nmenuid_cm').appendChild(ncheckbox());
         $('#nmenuid_cc').appendChild(ncheckbox());
@@ -488,6 +490,15 @@
             }
             $('.checkbutton', this).classList.toggle('checked');
         };
+
+        $('#nmenuid_sm').onclick = function() {
+            if ($('.checkbutton', this).classList.contains('checked')) {
+                sv("k_showMobileAPI", false);
+            } else {
+                sv("k_showMobileAPI", true);
+            }
+            $('.checkbutton', this).classList.toggle('checked');
+        }
 
         $('#nmenuid_af').onclick = function() {
             toggleMenu('hide');
@@ -627,6 +638,10 @@
 
         if (gv("k_closeModer", false) === true) {
             $('#nmenuid_cm .checkbutton').classList.add('checked');
+        }
+
+        if (gv('k_showMobileAPI', false) === true) {
+            $('#nmenuid_sm .checkbutton').classList.add('checked');
         }
 
         if (gv("k_clonechat", false) === true) {
@@ -909,6 +924,31 @@ nav.flex div.overflow-y-auto {
                 const fetchReqUrl = argumentsList[0];
                 let fetchRsp;
                 try {
+                    if (gv("k_showMobileAPI", false) && fetchReqUrl.includes('/backend-api/models')) {
+                        return target.apply(thisArg, argumentsList).then(async response => {
+                            const responseClone = response.clone();
+                            let res = await responseClone.json();
+                            res.models = res.models.map(m => {
+                                if (m.slug === 'gpt-4-mobile') {
+                                    m.tags = m.tags.filter(t => {
+                                        return t !== 'mobile';
+                                    });
+                                    res.categories.push({
+                                        browsing_model: null,
+                                        category: "gpt_4",
+                                        code_interpreter_model: null,
+                                        default_model: "gpt-4-mobile",
+                                        human_category_name: "GPT-4-Mobile",
+                                        plugins_model: null,
+                                        subscription_level: "plus",
+                                    });
+                                }
+                                return m;
+                            });
+                            return new Response(JSON.stringify(res), response);
+                        });
+                    }
+
                     if (gv("k_closeModer", false) && fetchReqUrl.match('/backend-api/moderations(\\?|$)')) {
                         fetchRsp = Promise.resolve({
                             json: () => {return {}}
